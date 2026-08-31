@@ -24,13 +24,16 @@
         .error { color: #ef4444; margin-top: 10px; display: none; }
         
         /* Table Styles */
+        .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; text-align: left; }
-        th, td { padding: 12px 15px; border-bottom: 1px solid rgba(148, 163, 184, 0.1); }
+        th, td { padding: 12px 15px; border-bottom: 1px solid rgba(148, 163, 184, 0.1); white-space: nowrap; }
         th { background-color: rgba(30, 41, 59, 0.8); color: #7dd3fc; font-weight: 600; }
         tr:hover { background-color: rgba(255, 255, 255, 0.03); }
         .text-red { color: #ef4444; font-weight: bold; }
         .text-blue { color: #3b82f6; font-weight: bold; }
         .text-cyan { color: #38bdf8; font-weight: bold; }
+        .text-purple { color: #c084fc; font-weight: bold; }
+        .text-emerald { color: #34d399; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -42,7 +45,7 @@
     </div>
 
     <div class="search-box">
-        <input type="text" id="cityInput" value="Bengaluru" placeholder="Enter city name...">
+        <input type="text" id="cityInput" value="Delhi" placeholder="Enter city name...">
         <button onclick="fetchWeather()">🔍 Analyze Weather</button>
     </div>
     <div id="errorMsg" class="error">City not found. Please try again.</div>
@@ -58,26 +61,31 @@
 
     <!-- Chart Container -->
     <div class="chart-container">
-        <h2 style="margin-bottom: 15px;">📅 7-Day Temperature Graph</h2>
+        <h2 style="margin-bottom: 15px;">📅 7-Day Temperature Forecast</h2>
         <canvas id="forecastChart" height="100"></canvas>
     </div>
 
-    <!-- Table Container -->
+    <!-- 7-Day Metrics Table -->
     <div class="table-container">
-        <h2 style="margin-bottom: 15px;">📊 7-Day Detailed Forecast Table</h2>
-        <table>
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Max Temp (°C)</th>
-                    <th>Min Temp (°C)</th>
-                    <th>ML Predicted Mean (°C)</th>
-                </tr>
-            </thead>
-            <tbody id="forecastTableBody">
-                <!-- Rows injected dynamically -->
-            </tbody>
-        </table>
+        <h2 style="margin-bottom: 15px;">📊 7-Day Weather & Pressure Metrics Table</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Max Temp (°C)</th>
+                        <th>Min Temp (°C)</th>
+                        <th>Pressure (hPa)</th>
+                        <th>Humidity (%)</th>
+                        <th>Wind Speed (km/h)</th>
+                        <th>ML Predicted Temp (°C)</th>
+                    </tr>
+                </thead>
+                <tbody id="forecastTableBody">
+                    <!-- Rows injected dynamically -->
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 
@@ -127,15 +135,19 @@
             const dates = daily.time;
             const maxTemps = daily.temperature_2m_max;
             const minTemps = daily.temperature_2m_min;
-            const mlPredictions = daily.relative_humidity_2m_mean.map((h, i) => 
-                predictMLTemperature(h, daily.wind_speed_10m_max[i], daily.pressure_msl_mean[i], now.getMonth() + 1)
+            const pressures = daily.pressure_msl_mean;
+            const humidities = daily.relative_humidity_2m_mean;
+            const winds = daily.wind_speed_10m_max;
+            
+            const mlPredictions = humidities.map((h, i) => 
+                predictMLTemperature(h, winds[i], pressures[i], now.getMonth() + 1)
             );
 
             // Render Chart
             renderChart(dates, maxTemps, minTemps, mlPredictions);
 
             // Render Table Rows
-            renderTable(dates, maxTemps, minTemps, mlPredictions);
+            renderTable(dates, maxTemps, minTemps, pressures, humidities, winds, mlPredictions);
 
         } catch (e) {
             console.error(e);
@@ -168,7 +180,7 @@
         });
     }
 
-    function renderTable(dates, maxData, minData, mlData) {
+    function renderTable(dates, maxData, minData, pressureData, humidityData, windData, mlData) {
         const tbody = document.getElementById('forecastTableBody');
         tbody.innerHTML = '';
 
@@ -178,6 +190,9 @@
                 <td>${dates[i]}</td>
                 <td class="text-red">${maxData[i]} °C</td>
                 <td class="text-blue">${minData[i]} °C</td>
+                <td class="text-purple">${pressureData[i]} hPa</td>
+                <td class="text-emerald">${humidityData[i]}%</td>
+                <td>${windData[i]} km/h</td>
                 <td class="text-cyan">${mlData[i]} °C</td>
             `;
             tbody.appendChild(row);
